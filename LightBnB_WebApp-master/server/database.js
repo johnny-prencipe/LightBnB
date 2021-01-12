@@ -1,3 +1,13 @@
+const { Pool } = require('pg')
+const pool = new Pool({
+  host: 'localhost',
+  user: 'vagrant',
+  password: 123,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+})
+
 const properties = require('./json/properties.json');
 const users = require('./json/users.json');
 
@@ -9,16 +19,15 @@ const users = require('./json/users.json');
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithEmail = function(email) {
-  let user;
-  for (const userId in users) {
-    user = users[userId];
-    if (user.email.toLowerCase() === email.toLowerCase()) {
-      break;
-    } else {
-      user = null;
-    }
-  }
-  return Promise.resolve(user);
+  const query = [email];
+
+  return pool.query(`
+  SELECT *
+    FROM users
+    WHERE users.email = $1`,
+  query)
+
+  .then(res => res.rows[0]);
 }
 exports.getUserWithEmail = getUserWithEmail;
 
@@ -67,12 +76,14 @@ exports.getAllReservations = getAllReservations;
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = function(options, limit = 10) {
-  const limitedProperties = {};
-  for (let i = 1; i <= limit; i++) {
-    limitedProperties[i] = properties[i];
-  }
-  return Promise.resolve(limitedProperties);
+  return pool.query(`
+  SELECT * FROM properties
+  LIMIT $1
+  `, [limit])
+  .then(res => res.rows);
 }
+
+getAllProperties();
 exports.getAllProperties = getAllProperties;
 
 
